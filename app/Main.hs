@@ -1,10 +1,13 @@
 module Main (main) where
 
 import Lib
+
 import System.Environment (getArgs)
 
 import Text.Parsec
 import Text.Parsec.String (Parser)
+
+import Data.List (intercalate)
 
 main :: IO ()
 main = do
@@ -12,14 +15,16 @@ main = do
   (input, source, sink) <- maybe (fail "Required arguments: inputfile, source, sink") pure $ ensureArgs args
   contents <- readFile input
   mappings <- either (fail . show) pure $ runParser parseCSV () input contents
-  mapM_ putStrLn $ path mappings source sink
+  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ paths mappings source sink
 
 ensureArgs :: [String] -> Maybe (String, String, String)
 ensureArgs [input, source, sink] = Just (input, source, sink)
 ensureArgs _ = Nothing
 
 parseCSV :: Parser [(String, String)]
-parseCSV = many parsePair
+parseCSV = do
+  _ <- string "source,target\n"
+  sepEndBy parsePair newline
 
 parsePair :: Parser (String, String)
 parsePair = do
