@@ -7,15 +7,24 @@ import System.Environment (getArgs)
 import Text.Parsec
 import Text.Parsec.String (Parser)
 
-import Data.List (intercalate)
+import Data.List (intercalate, uncons)
 
 main :: IO ()
 main = do
   args <- getArgs
+  (command, rest) <- maybe (fail "Must specify a command") pure $ Data.List.uncons args
+  processCommand command rest
+
+processCommand :: String -> [String] -> IO ()
+processCommand "paths" args = processPaths args
+processCommand cmd _args = fail ("Unknown command: " <> cmd)
+
+processPaths :: [String] -> IO ()
+processPaths args = do
   (input, source, sink) <- maybe (fail "Required arguments: inputfile, source, sink") pure $ ensureArgs args
   contents <- readFile input
   mappings <- either (fail . show) pure $ runParser parseCSV () input contents
-  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ paths mappings source sink
+  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ dfsPaths mappings source sink
 
 ensureArgs :: [String] -> Maybe (String, String, String)
 ensureArgs [input, source, sink] = Just (input, source, sink)
