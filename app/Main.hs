@@ -9,26 +9,51 @@ import Text.Parsec.String (Parser)
 
 import Data.List (intercalate, uncons)
 
+------------- TODO: Replace custom arg parsing with a nice library -------------
+
 main :: IO ()
 main = do
   args <- getArgs
   (command, rest) <- maybe (fail "Must specify a command") pure $ Data.List.uncons args
-  processCommand command rest
+  (inputFile, rest') <- maybe (fail "Must specify a data file") pure $ Data.List.uncons rest
+  contents <- readFile inputFile
+  mappings <- either (fail . show) pure $ runParser parseCSV () inputFile contents
+  processCommand mappings command rest'
 
-processCommand :: String -> [String] -> IO ()
-processCommand "paths" args = processPaths args
-processCommand cmd _args = fail ("Unknown command: " <> cmd)
+processCommand :: Mappings -> String -> [String] -> IO ()
+processCommand mappings  "paths"   args  = processPaths mappings args
+processCommand mappings  "callers" args  = processCallers mappings args
+processCommand mappings  "callees" args  = processCallees mappings args
+processCommand _mappings cmd       _args = fail ("Unknown command: " <> cmd)
 
-processPaths :: [String] -> IO ()
-processPaths args = do
-  (input, source, sink) <- maybe (fail "Required arguments: inputfile, source, sink") pure $ ensureArgs args
-  contents <- readFile input
-  mappings <- either (fail . show) pure $ runParser parseCSV () input contents
+processPaths :: Mappings -> [String] -> IO ()
+processPaths mappings args = do
+  (source, sink) <- maybe (fail "Required arguments: inputfile, source, sink") pure $ ensurePathsArgs args
   putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ dfsPaths mappings source sink
 
-ensureArgs :: [String] -> Maybe (String, String, String)
-ensureArgs [input, source, sink] = Just (input, source, sink)
-ensureArgs _ = Nothing
+ensurePathsArgs :: [String] -> Maybe (String, String)
+ensurePathsArgs [source, sink] = Just (source, sink)
+ensurePathsArgs _              = Nothing
+
+processCallers :: Mappings -> [String] -> IO ()
+processCallers mappings args = do
+  callee <- maybe (fail "Required arguments for callers: source") pure $ ensureCallersArgs args
+  putStrLn $ intercalate "\n" $ callers mappings callee
+
+ensureCallersArgs :: [String] -> Maybe String
+ensureCallersArgs [callee] = Just callee
+ensureCallersArgs _        = Nothing
+
+processCallees :: Mappings -> [String] -> IO ()
+processCallees mappings args = do
+  caller <- maybe (fail "Required arguments for callees: source") pure $ ensureCalleesArgs args
+  putStrLn $ intercalate "\n" $ callees mappings caller
+
+ensureCalleesArgs :: [String] -> Maybe String
+ensureCalleesArgs [caller] = Just caller
+ensureCalleesArgs _        = Nothing
+
+--------------------------------------------------------------------------------
 
 parseCSV :: Parser [(String, String)]
 parseCSV = do
