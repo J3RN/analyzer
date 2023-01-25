@@ -17,37 +17,37 @@ main = do
   (command, rest) <- maybe (fail "Must specify a command") pure $ Data.List.uncons args
   (inputFile, rest') <- maybe (fail "Must specify a data file") pure $ Data.List.uncons rest
   contents <- readFile inputFile
-  mappings <- either (fail . show) pure $ runParser parseCSV () inputFile contents
-  processCommand mappings command rest'
+  calls <- either (fail . show) pure $ runParser parseCSV () inputFile contents
+  processCommand calls command rest'
 
-processCommand :: Mappings -> String -> [String] -> IO ()
-processCommand mappings  "paths"   args  = processPaths mappings args
-processCommand mappings  "callers" args  = processCallers mappings args
-processCommand mappings  "callees" args  = processCallees mappings args
-processCommand _mappings cmd       _args = fail ("Unknown command: " <> cmd)
+processCommand :: Calls -> String -> [String] -> IO ()
+processCommand calls  "paths"   args  = processPaths calls args
+processCommand calls  "callers" args  = processCallers calls args
+processCommand calls  "callees" args  = processCallees calls args
+processCommand _calls cmd       _args = fail ("Unknown command: " <> cmd)
 
-processPaths :: Mappings -> [String] -> IO ()
-processPaths mappings args = do
+processPaths :: Calls -> [String] -> IO ()
+processPaths calls args = do
   (source, sink) <- maybe (fail "Required arguments: inputfile, source, sink") pure $ ensurePathsArgs args
-  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ dfsPaths mappings source sink
+  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ dfsPaths calls source sink
 
 ensurePathsArgs :: [String] -> Maybe (String, String)
 ensurePathsArgs [source, sink] = Just (source, sink)
 ensurePathsArgs _              = Nothing
 
-processCallers :: Mappings -> [String] -> IO ()
-processCallers mappings args = do
+processCallers :: Calls -> [String] -> IO ()
+processCallers calls args = do
   callee <- maybe (fail "Required arguments for callers: source") pure $ ensureCallersArgs args
-  putStrLn $ intercalate "\n" $ callers mappings callee
+  putStrLn $ intercalate "\n" $ callers calls callee
 
 ensureCallersArgs :: [String] -> Maybe String
 ensureCallersArgs [callee] = Just callee
 ensureCallersArgs _        = Nothing
 
-processCallees :: Mappings -> [String] -> IO ()
-processCallees mappings args = do
+processCallees :: Calls -> [String] -> IO ()
+processCallees calls args = do
   caller <- maybe (fail "Required arguments for callees: source") pure $ ensureCalleesArgs args
-  putStrLn $ intercalate "\n" $ callees mappings caller
+  putStrLn $ intercalate "\n" $ callees calls caller
 
 ensureCalleesArgs :: [String] -> Maybe String
 ensureCalleesArgs [caller] = Just caller
