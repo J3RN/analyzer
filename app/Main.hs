@@ -21,10 +21,12 @@ main = do
   processCommand calls command rest'
 
 processCommand :: Calls -> String -> [String] -> IO ()
-processCommand calls  "paths"   args  = processPaths calls args
-processCommand calls  "callers" args  = processCallers calls args
-processCommand calls  "callees" args  = processCallees calls args
-processCommand _calls cmd       _args = fail ("Unknown command: " <> cmd)
+processCommand calls  "paths"        args  = processPaths calls args
+processCommand calls  "callers"      args  = processCallers calls args
+processCommand calls  "callees"      args  = processCallees calls args
+processCommand calls  "dependencies" args  = processDependencies calls args
+processCommand calls  "dependents"   args  = processDependents calls args
+processCommand _calls cmd            _args = fail ("Unknown command: " <> cmd)
 
 processPaths :: Calls -> [String] -> IO ()
 processPaths calls args = do
@@ -52,6 +54,24 @@ processCallees calls args = do
 ensureCalleesArgs :: [String] -> Maybe String
 ensureCalleesArgs [caller] = Just caller
 ensureCalleesArgs _        = Nothing
+
+processDependencies :: Calls -> [String] -> IO ()
+processDependencies calls args = do
+  source <- maybe (fail "dependencies command requires a single 'source' argument") pure $ ensureDependenciesArgs args
+  putStrLn $ intercalate "\n" $ dependencies calls source
+
+ensureDependenciesArgs :: [String] -> Maybe String
+ensureDependenciesArgs [source] = Just source
+ensureDependenciesArgs _        = Nothing
+
+processDependents :: Calls -> [String] -> IO ()
+processDependents calls args = do
+  source <- maybe (fail "dependents command requires a single 'source' argument") pure $ ensureDependentsArgs args
+  putStrLn $ intercalate "\n" $ dependents calls source
+
+ensureDependentsArgs :: [String] -> Maybe String
+ensureDependentsArgs [source] = Just source
+ensureDependentsArgs _        = Nothing
 
 --------------------------------------------------------------------------------
 

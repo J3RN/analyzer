@@ -2,6 +2,8 @@ module Lib
     ( dfsPaths
     , callers
     , callees
+    , dependencies
+    , dependents
     , Calls
     ) where
 
@@ -26,3 +28,13 @@ callers calls callee =
 callees :: Calls -> String -> [String]
 callees calls caller =
   calls & filter((== caller) . fst) & map snd
+
+dependencies :: Calls -> String -> [String]
+dependencies calls source =
+  let (childCalls, others) = partition ((== source) . fst) calls
+  in (map snd childCalls) ++ (concat $ map (dependencies others) (map snd childCalls))
+
+dependents :: Calls -> String -> [String]
+dependents calls source =
+  let (parentCalls, others) = partition ((== source) . snd) calls
+  in (map fst parentCalls) ++ (concat $ map (dependents others) (map fst parentCalls))
