@@ -1,97 +1,108 @@
 module Main (main) where
 
 import Lib
+import CSV
 
-import System.Environment (getArgs)
+import Data.List (intercalate)
 
-import Text.Parsec
-import Text.Parsec.String (Parser)
+import Options.Applicative
 
-import Data.List (intercalate, uncons)
+type FileName = String
 
-------------- TODO: Replace custom arg parsing with a nice library -------------
+data Command
+  = Paths FileName PathsOptions
+  | Callers FileName CallersOptions
+  | Callees FileName CalleesOptions
+  | Dependents FileName DependentsOptions
+  | Dependencies FileName DependenciesOptions
+
+data PathsOptions = PathsOptions
+  { source :: String
+  , sink :: String
+  }
+
+data CallersOptions = CallersOptions
+  { callee :: String
+  }
+
+data CalleesOptions = CalleesOptions
+  { caller :: String
+  }
+
+data DependentsOptions = DependentsOptions
+  { dependency :: String
+  }
+
+data DependenciesOptions = DependenciesOptions
+  { dependent :: String
+  }
 
 main :: IO ()
 main = do
-  args <- getArgs
-  (command, rest) <- maybe (fail "Must specify a command") pure $ Data.List.uncons args
-  (inputFile, rest') <- maybe (fail "Must specify a data file") pure $ Data.List.uncons rest
-  contents <- readFile inputFile
-  calls <- either (fail . show) pure $ runParser parseCSV () inputFile contents
-  processCommand calls command rest'
+  cmd <- execParser opts
+  processCommand cmd
 
-processCommand :: Calls -> String -> [String] -> IO ()
-processCommand calls  "paths"        args  = processPaths calls args
-processCommand calls  "callers"      args  = processCallers calls args
-processCommand calls  "callees"      args  = processCallees calls args
-processCommand calls  "dependencies" args  = processDependencies calls args
-processCommand calls  "dependents"   args  = processDependents calls args
-processCommand _calls cmd            _args = fail ("Unknown command: " <> cmd)
+opts :: ParserInfo Command
+opts = info (analyzerCommand <**> helper) fullDesc
 
-processPaths :: Calls -> [String] -> IO ()
-processPaths calls args = do
-  (source, sink) <- maybe (fail "Required arguments: inputfile, source, sink") pure $ ensurePathsArgs args
-  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ dfsPaths calls source sink
+analyzerCommand :: Parser Command
+analyzerCommand = (hsubparser
+  ( command "paths" (info pathsCommand (progDesc "Show the call-graph paths from a source to a sink"))
+    <> command "callers" (info callersCommand (progDesc "List the functions that call the specified function"))
+    <> command "callees" (info calleesCommand (progDesc "List the functions that the specified function calls"))
+    <> command "dependents" (info dependentsCommand (progDesc "List the functions that call the specified function, recursively"))
+    <> command "dependencies" (info dependenciesCommand (progDesc "List the functions the specified function calls, recursively"))
+  ))
 
-ensurePathsArgs :: [String] -> Maybe (String, String)
-ensurePathsArgs [source, sink] = Just (source, sink)
-ensurePathsArgs _              = Nothing
+pathsCommand :: Parser Command
+pathsCommand = Paths
+               <$> argument str (metavar "inputfile")
+               <*> (PathsOptions
+                    <$> argument str (metavar "source")
+                    <*> argument str (metavar "sink"))
 
-processCallers :: Calls -> [String] -> IO ()
-processCallers calls args = do
-  callee <- maybe (fail "Required arguments for callers: source") pure $ ensureCallersArgs args
-  putStrLn $ intercalate "\n" $ callers calls callee
+callersCommand :: Parser Command
+callersCommand = Callers
+                 <$> argument str (metavar "inputfile")
+                 <*> (CallersOptions <$> argument str (metavar "callee"))
 
-ensureCallersArgs :: [String] -> Maybe String
-ensureCallersArgs [callee] = Just callee
-ensureCallersArgs _        = Nothing
+calleesCommand :: Parser Command
+calleesCommand = Callees
+                 <$> argument str (metavar "inputfile")
+                 <*> (CalleesOptions <$> argument str (metavar "caller"))
 
-processCallees :: Calls -> [String] -> IO ()
-processCallees calls args = do
-  caller <- maybe (fail "Required arguments for callees: source") pure $ ensureCalleesArgs args
-  putStrLn $ intercalate "\n" $ callees calls caller
+dependentsCommand :: Parser Command
+dependentsCommand = Dependents
+                    <$> argument str (metavar "inputfile")
+                    <*> (DependentsOptions <$> argument str (metavar "dependency"))
 
-ensureCalleesArgs :: [String] -> Maybe String
-ensureCalleesArgs [caller] = Just caller
-ensureCalleesArgs _        = Nothing
+dependenciesCommand :: Parser Command
+dependenciesCommand = Dependencies
+                      <$> argument str (metavar "inputfile")
+                      <*> (DependenciesOptions <$> argument str (metavar "dependent"))
 
-processDependencies :: Calls -> [String] -> IO ()
-processDependencies calls args = do
-  source <- maybe (fail "dependencies command requires a single 'source' argument") pure $ ensureDependenciesArgs args
-  putStrLn $ intercalate "\n" $ dependencies calls source
+processCommand :: Command -> IO ()
+processCommand (Paths inputFile options) = do
+  calls <- readCSV inputFile
+  putStrLn $ intercalate "\n\n" $ map (intercalate "\n") $ dfsPaths calls (source options) (sink options)
 
-ensureDependenciesArgs :: [String] -> Maybe String
-ensureDependenciesArgs [source] = Just source
-ensureDependenciesArgs _        = Nothing
+processCommand (Callers inputFile options) = do
+  calls <- readCSV inputFile
+  putStrLn $ intercalate "\n" $ head $ dependents calls (callee options)
 
-processDependents :: Calls -> [String] -> IO ()
-processDependents calls args = do
-  source <- maybe (fail "dependents command requires a single 'source' argument") pure $ ensureDependentsArgs args
-  putStrLn $ intercalate "\n" $ dependents calls source
+processCommand (Callees inputFile options) = do
+  calls <- readCSV inputFile
+  putStrLn $ intercalate "\n" $ head $ dependencies calls (caller options)
 
-ensureDependentsArgs :: [String] -> Maybe String
-ensureDependentsArgs [source] = Just source
-ensureDependentsArgs _        = Nothing
+processCommand (Dependents inputFile options) = do
+  calls <- readCSV inputFile
+  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n") $ dependents calls (dependency options)
 
---------------------------------------------------------------------------------
+processCommand (Dependencies inputFile options) = do
+  calls <- readCSV inputFile
+  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n") $ dependencies calls (dependent options)
 
-parseCSV :: Parser [(String, String)]
-parseCSV = do
-  _ <- string "source,target\n"
-  sepEndBy parsePair newline
-
-parsePair :: Parser (String, String)
-parsePair = do
-  source <- parseString
-  _ <- char ','
-  sink <- parseString
-  return (source, sink)
-
-parseString :: Parser String
-parseString = do
-  _ <- char '"'
-  s <- many1 (satisfy (/= '"'))
-  _ <- char '"'
-  return s
-
-
+readCSV :: String -> IO [(String, String)]
+readCSV inputFile = do
+  contents <- readFile $ inputFile
+  either (fail.show) pure $ CSV.parse inputFile contents
