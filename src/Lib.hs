@@ -2,10 +2,16 @@ module Lib
     ( dfsPaths
     , dependencies
     , dependents
+    , dot
     , Calls
     ) where
 
-import Data.List (partition)
+import Data.Bifunctor (bimap)
+import Data.List (findIndices, intercalate, partition)
+import Data.Map()
+import qualified Data.Map as Map
+import Data.Set()
+import qualified Data.Set as Set
 
 type Path = [String]
 type Calls = [(String, String)]
@@ -31,3 +37,41 @@ dependents calls source =
   in case parentCalls of
     [] -> []
     _ -> (map fst parentCalls):(concat $ map (dependents others) (map fst parentCalls))
+
+dot :: Calls -> [String] -> [String] -> String
+dot calls _sources _sinks =
+    let moduleStr = formatModules calls
+        callStr = formatCalls calls
+    in intercalate "\n" [ "digraph {"
+                        , "graph [ranksep = 4.0]"
+                        , moduleStr
+                        , callStr
+                        , "}"
+                        ]
+
+formatCalls :: Calls -> String
+formatCalls calls =
+  let callLines = map (\(source, target) -> "\"" <> source <> "\" -> \"" <> target <> "\";") calls
+  in intercalate "\n" callLines
+
+formatModules :: Calls -> String
+formatModules calls =
+  intercalate "\n" $ map formatMod $ Map.toList $ aggregateMods $ calls
+  where formatMod (m, funs) = intercalate "\n" ["subgraph \"cluster_" <> m <> "\" {"
+                                               , "label = \"" <> m <> "\";"
+                                               , "style = \"rounded, filled\";"
+                                               , "color = lightgrey;"
+                                               , "node [style=filled, color=white];"
+                                               , (intercalate "\n" $ map (formatFunction m) $ Set.toList funs)
+                                               , "}"
+                                               ]
+        formatFunction m f =
+          "\"" <> m <> "." <> f <> "\" [label = \"" <> f <> "\"]"
+        aggregateMods =
+          foldl updateModMap (Map.fromList []) . fmap (bimap (splitMod) (splitMod))
+        updateModMap m ((sourcem, sourcef), (targetm, targetf)) =
+          Map.insertWith (Set.union) targetm (Set.singleton targetf) $
+          Map.insertWith (Set.union) sourcem (Set.singleton sourcef) $ m
+        splitMod str =
+          let lastDot = last $ findIndices (== '.') str
+          in (take lastDot str, drop (lastDot + 1) str)

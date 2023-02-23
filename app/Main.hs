@@ -13,6 +13,7 @@ data Command
   | Callees FilePath CalleesOptions
   | Dependents FilePath DependentsOptions
   | Dependencies FilePath DependenciesOptions
+  | Dot FilePath DotOptions
 
 data PathsOptions = PathsOptions
   { source :: String
@@ -35,6 +36,12 @@ data DependenciesOptions = DependenciesOptions
   { dependent :: String
   }
 
+data DotOptions = DotOptions
+  { outFile :: String
+  , sinks :: [String]
+  , sources :: [String]
+  }
+
 main :: IO ()
 main = do
   cmd <- execParser opts
@@ -50,6 +57,7 @@ analyzerCommand = (hsubparser
     <> command "callees" (info calleesCommand (progDesc "List the functions that the specified function calls"))
     <> command "dependents" (info dependentsCommand (progDesc "List the functions that call the specified function, recursively"))
     <> command "dependencies" (info dependenciesCommand (progDesc "List the functions the specified function calls, recursively"))
+    <> command "dot" (info dotCommand (progDesc "Output a visualization of the call graph in GraphViz DOT format"))
   ))
 
 pathsCommand :: Parser Command
@@ -79,6 +87,23 @@ dependenciesCommand = Dependencies
                       <$> argument str (metavar "INPUTFILE")
                       <*> (DependenciesOptions <$> argument str (metavar "DEPENDENT"))
 
+dotCommand :: Parser Command
+dotCommand = Dot
+             <$> argument str (metavar "inputfile")
+             <*> (DotOptions
+                  <$> strOption (long "out"
+                                 <> short 'o'
+                                 <> metavar "FILE"
+                                 <> value "out.dot"
+                                 <> help "File to write the output to (defaults to 'out.dot')")
+                  <*> many (strOption (long "sink"
+                                       <> metavar "SINK"
+                                       <> help "Terminal function, a leaf in the call tree"))
+                  <*> many (strOption (long "source"
+                                       <> metavar "SOURCE"
+                                       <> help "Source function, root in the call tree")))
+
+
 processCommand :: Command -> IO ()
 processCommand (Paths inputFile options) = do
   calls <- readCSV inputFile
@@ -99,6 +124,10 @@ processCommand (Dependents inputFile options) = do
 processCommand (Dependencies inputFile options) = do
   calls <- readCSV inputFile
   putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n") $ dependencies calls (dependent options)
+
+processCommand (Dot inputFile options) = do
+  calls <- readCSV inputFile
+  writeFile (outFile options) (dot calls (sources options) (sinks options))
 
 readCSV :: String -> IO [(String, String)]
 readCSV inputFile = do
