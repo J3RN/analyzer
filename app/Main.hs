@@ -7,14 +7,12 @@ import Data.List (intercalate)
 
 import Options.Applicative
 
-type FileName = String
-
 data Command
-  = Paths FileName PathsOptions
-  | Callers FileName CallersOptions
-  | Callees FileName CalleesOptions
-  | Dependents FileName DependentsOptions
-  | Dependencies FileName DependenciesOptions
+  = Paths FilePath PathsOptions
+  | Callers FilePath CallersOptions
+  | Callees FilePath CalleesOptions
+  | Dependents FilePath DependentsOptions
+  | Dependencies FilePath DependenciesOptions
 
 data PathsOptions = PathsOptions
   { source :: String
