@@ -1,7 +1,7 @@
 -- Admittedly, yes, I probably should just use a CSV library
 module CSV (parse) where
 
-import Text.Parsec (char, many1, newline, runParser, satisfy, sepEndBy, string, ParseError)
+import Text.Parsec (between, char, many1, newline, runParser, sepEndBy, satisfy, string, ParseError)
 import Text.Parsec.String (Parser)
 
 parse :: String -> String -> Either ParseError [(String, String)]
@@ -21,8 +21,4 @@ parsePair = do
   return (source, sink)
 
 parseString :: Parser String
-parseString = do
-  _ <- char '"'
-  s <- many1 (satisfy (/= '"'))
-  _ <- char '"'
-  return s
+parseString = between (char '"') (char '"') (many1 (satisfy (/= '"')))
