@@ -56,30 +56,30 @@ analyzerCommand = (hsubparser
 
 pathsCommand :: Parser Command
 pathsCommand = Paths
-               <$> argument str (metavar "inputfile")
+               <$> argument str (metavar "INPUTFILE")
                <*> (PathsOptions
-                    <$> argument str (metavar "source")
-                    <*> argument str (metavar "sink"))
+                    <$> argument str (metavar "SOURCE")
+                    <*> argument str (metavar "SINK"))
 
 callersCommand :: Parser Command
 callersCommand = Callers
-                 <$> argument str (metavar "inputfile")
-                 <*> (CallersOptions <$> argument str (metavar "callee"))
+                 <$> argument str (metavar "INPUTFILE")
+                 <*> (CallersOptions <$> argument str (metavar "CALLEE"))
 
 calleesCommand :: Parser Command
 calleesCommand = Callees
-                 <$> argument str (metavar "inputfile")
-                 <*> (CalleesOptions <$> argument str (metavar "caller"))
+                 <$> argument str (metavar "INPUTFILE")
+                 <*> (CalleesOptions <$> argument str (metavar "CALLER"))
 
 dependentsCommand :: Parser Command
 dependentsCommand = Dependents
-                    <$> argument str (metavar "inputfile")
-                    <*> (DependentsOptions <$> argument str (metavar "dependency"))
+                    <$> argument str (metavar "INPUTFILE")
+                    <*> (DependentsOptions <$> argument str (metavar "DEPENDENCY"))
 
 dependenciesCommand :: Parser Command
 dependenciesCommand = Dependencies
-                      <$> argument str (metavar "inputfile")
-                      <*> (DependenciesOptions <$> argument str (metavar "dependent"))
+                      <$> argument str (metavar "INPUTFILE")
+                      <*> (DependenciesOptions <$> argument str (metavar "DEPENDENT"))
 
 processCommand :: Command -> IO ()
 processCommand (Paths inputFile options) = do
