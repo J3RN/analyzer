@@ -18,25 +18,25 @@ type Call = (String, String)
 
 dfsPaths :: [Call] -> String -> String -> [Path]
 dfsPaths calls source sink =
-  let (children, others) = partition ((== source) . fst) calls
-      (finished, unfinished) = partition ((== sink) . snd) children
+  let (children, others) = partition ((== source) . caller) calls
+      (finished, unfinished) = partition ((== sink) . callee) children
       furtherPaths = concat $ map (progressPaths others) unfinished
-  in (map (\x -> [fst x, snd x]) finished) ++ furtherPaths
+  in (map (\x -> [caller x, callee x]) finished) ++ furtherPaths
   where progressPaths ms (so, si) = map (so:) (dfsPaths ms si sink)
 
 dependencies :: [Call] -> String -> [[String]]
 dependencies calls source =
-  let (childCalls, others) = partition ((== source) . fst) calls
+  let (childCalls, others) = partition ((== source) . caller) calls
   in case childCalls of
     [] -> []
-    _ -> (map snd childCalls):(concat $ map (dependencies others) (map snd childCalls))
+    _ -> (map callee childCalls):(concat $ map (dependencies others) (map callee childCalls))
 
 dependents :: [Call] -> String -> [[String]]
 dependents calls source =
-  let (parentCalls, others) = partition ((== source) . snd) calls
+  let (parentCalls, others) = partition ((== source) . callee) calls
   in case parentCalls of
     [] -> []
-    _ -> (map fst parentCalls):(concat $ map (dependents others) (map fst parentCalls))
+    _ -> (map caller parentCalls):(concat $ map (dependents others) (map caller parentCalls))
 
 dot :: [Call] -> [String] -> [String] -> String
 dot calls _sources _sinks =
@@ -75,3 +75,9 @@ formatModules calls =
         splitMod str =
           let lastDot = last $ findIndices (== '.') str
           in (take lastDot str, drop (lastDot + 1) str)
+
+caller :: Call -> String
+caller = fst
+
+callee :: Call -> String
+callee = snd
