@@ -51,8 +51,8 @@ dot calls _sources _sinks =
 
 formatCalls :: [Call] -> String
 formatCalls calls =
-  let callLines = map (\(source, target) -> "\"" <> source <> "\" -> \"" <> target <> "\";") calls
-  in intercalate "\n" callLines
+  intercalate "\n" $ map formatCall calls
+  where formatCall (source, target) = "\"" <> source <> "\" -> \"" <> target <> "\";"
 
 formatModules :: [Call] -> String
 formatModules calls =
