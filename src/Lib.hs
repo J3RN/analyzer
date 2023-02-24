@@ -39,15 +39,31 @@ dependents calls source =
     _ -> (map caller parentCalls):(concat $ map (dependents others) (map caller parentCalls))
 
 dot :: [Call] -> [String] -> [String] -> String
-dot calls _sources _sinks =
-    let moduleStr = formatModules calls
-        callStr = formatCalls calls
+dot calls sources sinks =
+    let sinkFilteredCalls = if sinks /= [] then filterBySinks sinks calls else calls
+        filteredCalls = if sources /= [] then filterBySources sources sinkFilteredCalls else sinkFilteredCalls
+        moduleStr = formatModules filteredCalls
+        callStr = formatCalls filteredCalls
     in intercalate "\n" [ "digraph {"
                         , "graph [ranksep = 4.0]"
                         , moduleStr
                         , callStr
                         , "}"
                         ]
+
+filterBySinks :: [String] -> [Call] -> [Call]
+filterBySinks [] _calls = []
+filterBySinks sinks calls =
+  let (sinkCalls, others) = partition (\call -> ((callee call) `elem` sinks)) calls
+      newSinks = map caller sinkCalls
+  in sinkCalls ++ filterBySinks newSinks others
+
+filterBySources :: [String] -> [Call] -> [Call]
+filterBySources [] _calls = []
+filterBySources sources calls =
+  let (sourceCalls, others) = partition (\call -> ((caller call) `elem` sources)) calls
+      newSources = map callee sourceCalls
+  in sourceCalls ++ filterBySources newSources others
 
 formatCalls :: [Call] -> String
 formatCalls calls =
