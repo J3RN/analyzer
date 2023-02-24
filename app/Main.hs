@@ -128,6 +128,7 @@ processCommand (Dependencies inputFile options) = do
 processCommand (Dot inputFile options) = do
   calls <- readCSV inputFile
   writeFile (outFile options) (dot calls (sources options) (sinks options))
+  putStrLn $ "Output written to " <> (outFile options)
 
 readCSV :: String -> IO [(String, String)]
 readCSV inputFile = do
