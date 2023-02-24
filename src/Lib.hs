@@ -3,7 +3,7 @@ module Lib
     , dependencies
     , dependents
     , dot
-    , Calls
+    , Call
     ) where
 
 import Data.Bifunctor (bimap)
@@ -14,9 +14,9 @@ import Data.Set()
 import qualified Data.Set as Set
 
 type Path = [String]
-type Calls = [(String, String)]
+type Call = (String, String)
 
-dfsPaths :: Calls -> String -> String -> [Path]
+dfsPaths :: [Call] -> String -> String -> [Path]
 dfsPaths calls source sink =
   let (children, others) = partition ((== source) . fst) calls
       (finished, unfinished) = partition ((== sink) . snd) children
@@ -24,21 +24,21 @@ dfsPaths calls source sink =
   in (map (\x -> [fst x, snd x]) finished) ++ furtherPaths
   where progressPaths ms (so, si) = map (so:) (dfsPaths ms si sink)
 
-dependencies :: Calls -> String -> [[String]]
+dependencies :: [Call] -> String -> [[String]]
 dependencies calls source =
   let (childCalls, others) = partition ((== source) . fst) calls
   in case childCalls of
     [] -> []
     _ -> (map snd childCalls):(concat $ map (dependencies others) (map snd childCalls))
 
-dependents :: Calls -> String -> [[String]]
+dependents :: [Call] -> String -> [[String]]
 dependents calls source =
   let (parentCalls, others) = partition ((== source) . snd) calls
   in case parentCalls of
     [] -> []
     _ -> (map fst parentCalls):(concat $ map (dependents others) (map fst parentCalls))
 
-dot :: Calls -> [String] -> [String] -> String
+dot :: [Call] -> [String] -> [String] -> String
 dot calls _sources _sinks =
     let moduleStr = formatModules calls
         callStr = formatCalls calls
@@ -49,12 +49,12 @@ dot calls _sources _sinks =
                         , "}"
                         ]
 
-formatCalls :: Calls -> String
+formatCalls :: [Call] -> String
 formatCalls calls =
   let callLines = map (\(source, target) -> "\"" <> source <> "\" -> \"" <> target <> "\";") calls
   in intercalate "\n" callLines
 
-formatModules :: Calls -> String
+formatModules :: [Call] -> String
 formatModules calls =
   intercalate "\n" $ map formatMod $ Map.toList $ aggregateMods $ calls
   where formatMod (m, funs) = intercalate "\n" ["subgraph \"cluster_" <> m <> "\" {"
