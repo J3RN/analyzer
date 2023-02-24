@@ -89,7 +89,7 @@ dependenciesCommand = Dependencies
 
 dotCommand :: Parser Command
 dotCommand = Dot
-             <$> argument str (metavar "inputfile")
+             <$> argument str (metavar "INPUTFILE")
              <*> (DotOptions
                   <$> strOption (long "out"
                                  <> short 'o'
@@ -98,10 +98,10 @@ dotCommand = Dot
                                  <> help "File to write the output to (defaults to 'out.dot')")
                   <*> many (strOption (long "sink"
                                        <> metavar "SINK"
-                                       <> help "Terminal function, a leaf in the call tree"))
+                                       <> help "Terminal function, a leaf in the call tree.  Multiple sinks are ORed together."))
                   <*> many (strOption (long "source"
                                        <> metavar "SOURCE"
-                                       <> help "Source function, root in the call tree")))
+                                       <> help "Source function, root in the call tree.  Multiple sinks are ORed together.")))
 
 
 processCommand :: Command -> IO ()
