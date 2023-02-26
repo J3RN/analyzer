@@ -3,11 +3,12 @@ module Lib
     , dependencies
     , dependents
     , dot
+    , nodes
     , Call
     ) where
 
 import Data.Bifunctor (bimap)
-import Data.List (findIndices, intercalate, partition)
+import Data.List (findIndices, intercalate, nub, partition)
 import Data.Map()
 import qualified Data.Map as Map
 import Data.Set()
@@ -15,6 +16,9 @@ import qualified Data.Set as Set
 
 type Path = [String]
 type Call = (String, String)
+
+nodes :: [Call] -> [String]
+nodes calls = nub $ concat $ [(map caller calls), (map callee calls)]
 
 dfsPaths :: [Call] -> String -> String -> [Path]
 dfsPaths calls source sink =

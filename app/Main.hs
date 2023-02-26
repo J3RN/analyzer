@@ -7,6 +7,8 @@ import Data.List (intercalate)
 
 import Options.Applicative
 
+import Text.Regex.TDFA
+
 data Command
   = Paths FilePath PathsOptions
   | Callers FilePath CallersOptions
@@ -127,7 +129,10 @@ processCommand (Dependencies inputFile options) = do
 
 processCommand (Dot inputFile options) = do
   calls <- readCSV inputFile
-  writeFile (outFile options) (dot calls (sources options) (sinks options))
+  let myNodes = nodes calls
+      nodeSources = filter (\node -> (any (node =~) (sources options))) myNodes
+      nodeSinks = filter (\node -> (any (node =~) (sinks options))) myNodes
+  writeFile (outFile options) (dot calls nodeSources nodeSinks)
   putStrLn $ "Output written to " <> (outFile options)
 
 readCSV :: String -> IO [(String, String)]

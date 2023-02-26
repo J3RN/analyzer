@@ -37,6 +37,7 @@ library
     , containers
     , optparse-applicative >=0.17.0.0
     , parsec
+    , regex-tdfa >=1.3.2 && <1.4
   default-language: Haskell2010
 
 executable analyzer
@@ -52,6 +53,7 @@ executable analyzer
     , containers
     , optparse-applicative >=0.17.0.0
     , parsec
+    , regex-tdfa >=1.3.2 && <1.4
   default-language: Haskell2010
 
 test-suite analyzer-test
@@ -68,4 +70,5 @@ test-suite analyzer-test
     , containers
     , optparse-applicative >=0.17.0.0
     , parsec
+    , regex-tdfa >=1.3.2 && <1.4
   default-language: Haskell2010
