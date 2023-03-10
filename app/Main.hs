@@ -3,7 +3,7 @@ module Main (main) where
 import Lib
 import CSV
 
-import Data.List (intercalate)
+import Data.List (intercalate, sort)
 
 import Options.Applicative
 
@@ -111,19 +111,19 @@ processCommand (Paths inputFile options) = do
 
 processCommand (Callers inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n" $ head $ dependents calls (callee options)
+  putStrLn $ intercalate "\n" $ sort $ head $ dependents calls (callee options)
 
 processCommand (Callees inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n" $ head $ dependencies calls (caller options)
+  putStrLn $ intercalate "\n" $ sort $ head $ dependencies calls (caller options)
 
 processCommand (Dependents inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n") $ dependents calls (dependency options)
+  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n" . sort) $ dependents calls (dependency options)
 
 processCommand (Dependencies inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n") $ dependencies calls (dependent options)
+  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n" . sort) $ dependencies calls (dependent options)
 
 processCommand (Dot inputFile options) = do
   calls <- readCSV inputFile
