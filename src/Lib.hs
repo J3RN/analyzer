@@ -7,6 +7,7 @@ module Lib
     ) where
 
 import Data.Bifunctor (bimap)
+import Data.Function ((&))
 import Data.List (findIndices, intercalate, partition)
 import Data.Map()
 import qualified Data.Map as Map
@@ -18,25 +19,32 @@ type Call = (String, String)
 
 dfsPaths :: [Call] -> String -> String -> [Path]
 dfsPaths calls source sink =
-  let (children, others) = partition ((== source) . caller) calls
-      (finished, unfinished) = partition ((== sink) . callee) children
-      furtherPaths = concat $ map (progressPaths others) unfinished
-  in (map (\x -> [caller x, callee x]) finished) ++ furtherPaths
-  where progressPaths ms (so, si) = map (so:) (dfsPaths ms si sink)
+  let (callsFromSource, otherCalls) = partition ((== source) . caller) calls
+      (fromSourceToSink, unfinishedFromSource) = partition ((== sink) . callee) callsFromSource
+      longerPaths = unfinishedFromSource & map (finishedPaths otherCalls sink) & concat
+  in (map callToPath fromSourceToSink) ++ longerPaths
+
+callToPath :: Call -> Path
+callToPath (cr, ce) = [cr, ce]
+
+finishedPaths :: [Call] -> String -> Call -> [Path]
+finishedPaths calls sink (cr, ce) = map (cr:) (dfsPaths calls ce sink)
 
 dependencies :: [Call] -> String -> [[String]]
 dependencies calls source =
-  let (childCalls, others) = partition ((== source) . caller) calls
+  let (childCalls, otherCalls) = partition ((== source) . caller) calls
+      callees = map callee childCalls
   in case childCalls of
-    [] -> []
-    _ -> (map callee childCalls):(concat $ map (dependencies others) (map callee childCalls))
+       [] -> []
+       _  -> callees:(callees & map (dependencies otherCalls) & concat)
 
 dependents :: [Call] -> String -> [[String]]
 dependents calls source =
-  let (parentCalls, others) = partition ((== source) . callee) calls
-  in case parentCalls of
-    [] -> []
-    _ -> (map caller parentCalls):(concat $ map (dependents others) (map caller parentCalls))
+  let (callsToSource, otherCalls) = partition ((== source) . callee) calls
+      callers = map caller callsToSource
+  in case callsToSource of
+       [] -> []
+       _  -> callers:(callers & map (dependents otherCalls) & concat)
 
 dot :: [Call] -> [String] -> [String] -> String
 dot calls sources sinks =
