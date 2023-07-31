@@ -30,6 +30,7 @@ data CalleesOptions = CalleesOptions
 
 data DependentsOptions = DependentsOptions
   { dependency :: String
+  , depth      :: Maybe Int
   }
 
 data DependenciesOptions = DependenciesOptions
@@ -80,7 +81,10 @@ calleesCommand = Callees
 dependentsCommand :: Parser Command
 dependentsCommand = Dependents
                     <$> argument str (metavar "INPUTFILE")
-                    <*> (DependentsOptions <$> argument str (metavar "DEPENDENCY"))
+                    <*> (DependentsOptions
+                         <$> argument str (metavar "DEPENDENCY")
+                         <*> optional (option auto (long "depth"
+                                                    <> metavar "DEPTH")))
 
 dependenciesCommand :: Parser Command
 dependenciesCommand = Dependencies
@@ -119,7 +123,10 @@ processCommand (Callees inputFile options) = do
 
 processCommand (Dependents inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n" . sort) $ dependents calls (dependency options)
+  let deps = case (depth options) of
+               Nothing -> dependents calls (dependency options)
+               Just d -> take d $ dependents calls (dependency options)
+  putStrLn $ intercalate "\n\n" $ fmap (intercalate "\n" . sort) $ deps
 
 processCommand (Dependencies inputFile options) = do
   calls <- readCSV inputFile
