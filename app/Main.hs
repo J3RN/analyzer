@@ -4,8 +4,11 @@ import Lib
 import CSV
 
 import Data.List (intercalate, sort)
+import Data.Maybe (listToMaybe)
 
 import Options.Applicative
+
+import System.IO (hPutStrLn, stderr)
 
 data Command
   = Paths FilePath PathsOptions
@@ -111,11 +114,15 @@ processCommand (Paths inputFile options) = do
 
 processCommand (Callers inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n" $ sort $ head $ dependents calls (callee options)
+  case listToMaybe $ dependents calls (callee options) of
+    Just callers -> putStrLn $ intercalate "\n" $ sort $ callers
+    Nothing -> hPutStrLn stderr "No callers found"
 
 processCommand (Callees inputFile options) = do
   calls <- readCSV inputFile
-  putStrLn $ intercalate "\n" $ sort $ head $ dependencies calls (caller options)
+  case listToMaybe $ dependencies calls (caller options) of
+    Just callees -> putStrLn $ intercalate "\n" $ sort $ callees
+    Nothing -> hPutStrLn stderr "No callees found"
 
 processCommand (Dependents inputFile options) = do
   calls <- readCSV inputFile
